@@ -1,0 +1,4 @@
+train: ../../CrowdHuman/images/train
+val:   ../../CrowdHuman/images/val
+nc: 1
+names: ['person']
