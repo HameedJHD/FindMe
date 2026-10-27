@@ -1,0 +1,36 @@
+train:
+  epochs: 50                # extend to 50 if stable
+  batch_size: 32            # drop to 32 if OOM
+  learning_rate: 0.0003
+  weight_decay: 0.0001
+  model:
+    architecture: "resnet50"
+    pretrained: true
+    input_size: [224, 224]
+    num_binary_classes: 61
+    num_color_classes: 11    # for each of footwear/hair/lowerbody/upperbody
+  dataset:
+    root: "/home/keiko/Desktop/FindMe/FindMe/PETA/PETA dataset/3DPeS/archive"
+    label_file: "/home/keiko/Desktop/FindMe/FindMe/PETA/PETA dataset/3DPeS/archive/Label.txt"
+    val_split: 0.2
+    seed: 42
+  loss:
+    binary: "BCEWithLogitsLoss"   # with pos_weight
+    color: "CrossEntropyLoss"     # per head, ignore_index for missing
+  metrics:
+    - "mAP"
+    - "f1_macro"
+  logging:
+    log_interval: 20
+    save_model: true
+    model_save_path: "/home/keiko/Desktop/testing/model/"
+  scheduler:
+    type: "cosine"
+    warmup_epochs: 2
+  augment:
+    resize: [224, 224]
+    horizontal_flip: true
+    color_jitter: [0.2, 0.2, 0.2, 0.1]
+    normalize: "imagenet"
+  eval:
+    threshold: "per-attr-optimal"  # tune per-attribute on val
