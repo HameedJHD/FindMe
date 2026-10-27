@@ -1,0 +1,13 @@
+{
+  "ExpandedNodes": [
+    "",
+    "\\models",
+    "\\runs",
+    "\\runs\\detect",
+    "\\runs\\detect\\runs",
+    "\\runs\\detect\\runs\\train",
+    "\\scripts"
+  ],
+  "SelectedNode": "\\.env",
+  "PreviewInSolutionExplorer": false
+}

@@ -1,0 +1,2204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FindMe – Intelligent Video Attribute Search</title>
+  <style>
+    /* ── Reset & Base ─────────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:       #0d1117;
+      --surface:  #161b22;
+      --card:     #1c2128;
+      --border:   #30363d;
+      --blue:     #58a6ff;
+      --green:    #3fb950;
+      --orange:   #d29922;
+      --red:      #f85149;
+      --purple:   #bc8cff;
+      --text:     #e6edf3;
+      --muted:    #7d8590;
+      --radius:   10px;
+      --shadow:   0 4px 24px rgba(0,0,0,0.4);
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    /* ── Header ──────────────────────────────────────────────────────────── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 32px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .logo-icon {
+      width: 38px; height: 38px;
+      background: linear-gradient(135deg, var(--blue), var(--purple));
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px;
+    }
+    header h1 { font-size: 20px; font-weight: 700; letter-spacing: -0.3px; }
+    header p  { font-size: 12px; color: var(--muted); margin-top: 1px; }
+
+    /* ── Step bar ────────────────────────────────────────────────────────── */
+    .steps {
+      display: flex;
+      gap: 0;
+      padding: 0 32px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+    }
+    .step-btn {
+      display: flex; align-items: center; gap: 8px;
+      padding: 14px 24px;
+      background: none; border: none; cursor: pointer;
+      color: var(--muted); font-size: 13px; font-weight: 500;
+      border-bottom: 2px solid transparent;
+      transition: all .2s; user-select: none;
+    }
+    .step-btn .num {
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      background: var(--border);
+      color: var(--muted);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 700;
+      transition: all .2s;
+    }
+    .step-btn.active {
+      color: var(--blue);
+      border-bottom-color: var(--blue);
+    }
+    .step-btn.active .num {
+      background: var(--blue);
+      color: #fff;
+    }
+    .step-btn.done .num {
+      background: var(--green);
+      color: #fff;
+    }
+    .step-btn.done { color: var(--green); }
+    .step-sep { color: var(--border); align-self: center; font-size: 18px; }
+
+    /* ── Main layout ─────────────────────────────────────────────────────── */
+    main {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 32px;
+    }
+    .section { display: none; }
+    .section.visible { display: block; }
+
+    /* ── Cards ───────────────────────────────────────────────────────────── */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      box-shadow: var(--shadow);
+    }
+    .card-title {
+      font-size: 15px; font-weight: 600; margin-bottom: 16px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .card-title span { font-size: 16px; }
+
+    /* ── Upload zone ─────────────────────────────────────────────────────── */
+    #drop-zone {
+      display: block;
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 60px 32px;
+      text-align: center;
+      cursor: pointer;
+      transition: all .2s;
+      user-select: none;
+    }
+    #drop-zone:hover, #drop-zone.drag-over {
+      border-color: var(--blue);
+      background: rgba(88,166,255,.05);
+    }
+    #drop-zone .icon { font-size: 48px; margin-bottom: 12px; }
+    #drop-zone h3    { font-size: 16px; font-weight: 600; margin-bottom: 6px; }
+    #drop-zone p     { color: var(--muted); font-size: 13px; }
+    #file-input { display: none; }
+    .file-chosen {
+      margin-top: 16px; padding: 12px 16px;
+      background: var(--surface); border-radius: 8px;
+      border: 1px solid var(--border);
+      display: none; align-items: center; gap: 10px;
+    }
+    .file-chosen.show { display: flex; }
+    .file-chosen .fname { font-weight: 500; flex: 1; }
+    .file-chosen .fsize { color: var(--muted); font-size: 12px; }
+
+    /* ── Buttons ─────────────────────────────────────────────────────────── */
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 9px 20px; border-radius: 8px;
+      border: none; cursor: pointer; font-size: 13px; font-weight: 600;
+      transition: all .15s; text-decoration: none;
+    }
+    .btn-primary  { background: var(--blue);   color: #fff; }
+    .btn-primary:hover  { background: #4493e0; }
+    .btn-success  { background: var(--green);  color: #fff; }
+    .btn-success:hover  { background: #35a344; }
+    .btn-purple   { background: var(--purple); color: #fff; }
+    .btn-purple:hover   { background: #a87de8; }
+    .btn-danger   { background: var(--red);    color: #fff; }
+    .btn:disabled { opacity: .45; cursor: not-allowed; }
+    .btn-row { display: flex; gap: 12px; margin-top: 20px; align-items: center; }
+
+    /* ── Progress ────────────────────────────────────────────────────────── */
+    .progress-wrap {
+      margin-top: 20px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px 24px;
+    }
+    .progress-header {
+      display: flex; justify-content: space-between;
+      margin-bottom: 10px; font-size: 13px;
+    }
+    .progress-label { font-weight: 600; }
+    .progress-pct   { color: var(--blue); font-weight: 700; }
+    .progress-bar-bg {
+      background: var(--border);
+      border-radius: 99px; height: 8px;
+      overflow: hidden;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--blue), var(--purple));
+      border-radius: 99px;
+      transition: width .4s ease;
+      width: 0%;
+    }
+    .progress-msg {
+      margin-top: 10px; color: var(--muted); font-size: 12px;
+    }
+    .status-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 4px 10px; border-radius: 99px; font-size: 11px; font-weight: 600;
+    }
+    .badge-processing { background: rgba(88,166,255,.15); color: var(--blue); }
+    .badge-done       { background: rgba(63,185,80,.15);  color: var(--green); }
+    .badge-error      { background: rgba(248,81,73,.15);  color: var(--red); }
+    .badge-uploaded   { background: rgba(210,153,34,.15); color: var(--orange); }
+    .pulse { animation: pulse 1.4s ease infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+    /* ── Video player ────────────────────────────────────────────────────── */
+    .video-wrap {
+      margin-top: 20px;
+      border-radius: var(--radius); overflow: hidden;
+      border: 1px solid var(--border);
+      background: #000;
+      display: none;
+    }
+    .video-wrap.show { display: block; }
+    .video-wrap video { width: 100%; display: block; max-height: 480px; }
+    .video-label {
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      padding: 8px 14px; font-size: 12px; color: var(--muted);
+      display: flex; align-items: center; gap: 6px;
+    }
+
+    /* ── Search section layout ───────────────────────────────────────────── */
+    .search-layout {
+      display: grid;
+      grid-template-columns: 340px 1fr;
+      gap: 24px;
+      align-items: start;
+    }
+
+    /* ── Filters sidebar ─────────────────────────────────────────────────── */
+    .filters {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .filters-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      font-weight: 600; font-size: 14px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .filter-group { border-bottom: 1px solid var(--border); }
+    .filter-group:last-child { border-bottom: none; }
+    .group-toggle {
+      width: 100%; text-align: left;
+      background: none; border: none; cursor: pointer;
+      color: var(--text); font-size: 13px; font-weight: 600;
+      padding: 12px 20px;
+      display: flex; align-items: center; justify-content: space-between;
+      transition: background .15s;
+    }
+    .group-toggle:hover { background: rgba(255,255,255,.03); }
+    .group-toggle .arrow { font-size: 10px; color: var(--muted); transition: transform .2s; }
+    .group-toggle.open .arrow { transform: rotate(180deg); }
+    .group-body {
+      display: none;
+      padding: 8px 20px 14px;
+    }
+    .group-body.open { display: block; }
+
+    /* Checkboxes */
+    .attr-checkbox {
+      display: flex; align-items: center; gap: 8px;
+      padding: 4px 0; cursor: pointer; font-size: 12.5px;
+      color: var(--muted); transition: color .15s;
+    }
+    .attr-checkbox:hover { color: var(--text); }
+    .attr-checkbox input { display: none; }
+    .check-box {
+      width: 16px; height: 16px;
+      border: 1.5px solid var(--border);
+      border-radius: 4px;
+      background: var(--surface);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; transition: all .15s;
+      font-size: 10px;
+    }
+    .attr-checkbox input:checked ~ .check-box {
+      background: var(--blue); border-color: var(--blue); color: #fff;
+    }
+    .attr-checkbox input:checked ~ span { color: var(--text); font-weight: 500; }
+
+    /* Color dropdowns */
+    .color-group { padding: 14px 20px; border-bottom: 1px solid var(--border); }
+    .color-group:last-child { border-bottom: none; }
+    .color-group label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+    .color-select {
+      width: 100%; padding: 7px 10px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 6px; color: var(--text); font-size: 13px;
+      cursor: pointer; appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%237d8590' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 10px center;
+      padding-right: 30px;
+    }
+    .color-select:focus { outline: none; border-color: var(--blue); }
+
+    /* Threshold sliders */
+    .threshold-row {
+      padding: 14px 20px 4px;
+      border-bottom: 1px solid var(--border);
+    }
+    .threshold-row label {
+      font-size: 12px; color: var(--muted);
+      display: flex; justify-content: space-between;
+      margin-bottom: 6px;
+    }
+    .threshold-row label span { color: var(--blue); font-weight: 600; }
+    input[type=range] {
+      width: 100%; appearance: none; height: 4px;
+      background: var(--border); border-radius: 99px; cursor: pointer;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      appearance: none; width: 14px; height: 14px;
+      border-radius: 50%; background: var(--blue); cursor: pointer;
+    }
+
+    /* Clear & Search buttons */
+    .filter-actions {
+      padding: 14px 20px;
+      display: flex; gap: 8px;
+    }
+    .btn-sm { padding: 7px 14px; font-size: 12px; border-radius: 6px; }
+
+    /* ── Result panel ────────────────────────────────────────────────────── */
+    .result-panel { display: flex; flex-direction: column; gap: 16px; }
+    .result-info {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      display: none;
+    }
+    .result-info.show { display: block; }
+    .result-count {
+      font-size: 28px; font-weight: 700; color: var(--blue);
+      margin-bottom: 4px;
+    }
+    .result-sub { color: var(--muted); font-size: 13px; }
+    .no-result { color: var(--orange); margin-top: 8px; font-size: 13px; }
+
+    /* ── Spinner ─────────────────────────────────────────────────────────── */
+    .spinner {
+      display: inline-block; width: 14px; height: 14px;
+      border: 2px solid rgba(88,166,255,.3);
+      border-top-color: var(--blue);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Toast ───────────────────────────────────────────────────────────── */
+    #toast {
+      position: fixed; bottom: 24px; right: 24px;
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 8px; padding: 12px 18px;
+      font-size: 13px; box-shadow: var(--shadow);
+      transform: translateY(80px); opacity: 0;
+      transition: all .3s; z-index: 9999;
+    }
+    #toast.show { transform: translateY(0); opacity: 1; }
+    #toast.error { border-color: var(--red); color: var(--red); }
+    #toast.success { border-color: var(--green); color: var(--green); }
+
+    /* ── Responsive ──────────────────────────────────────────────────────── */
+    @media (max-width: 800px) {
+      .search-layout { grid-template-columns: 1fr; }
+      main { padding: 16px; }
+      .steps { padding: 0 16px; }
+      header { padding: 12px 16px; }
+    }
+
+    /* ── History section ─────────────────────────────────────────────────── */
+    .history-section { margin-top: 24px; }
+    .history-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .history-title {
+      font-size: 13px; font-weight: 600; color: var(--text);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .history-title svg { width: 14px; height: 14px; color: var(--blue); flex-shrink: 0; }
+    .history-badge {
+      display: inline-flex; align-items: center;
+      padding: 2px 8px; border-radius: 99px; font-size: 11px; font-weight: 700;
+      background: rgba(88,166,255,.15); color: var(--blue);
+    }
+    .history-list { display: flex; flex-direction: column; gap: 8px; }
+    .hi-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 13px 16px;
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius);
+      transition: border-color .15s, background .15s;
+    }
+    .hi-item:hover { border-color: var(--blue); background: var(--surface); }
+    .hi-icon {
+      width: 36px; height: 36px;
+      background: rgba(88,166,255,.1); border-radius: 8px;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .hi-icon svg { width: 16px; height: 16px; color: var(--blue); }
+    .hi-info { flex: 1; min-width: 0; }
+    .hi-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .hi-meta { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+    .hi-meta span + span::before { content: ' · '; }
+    .hi-load {
+      flex-shrink: 0;
+      padding: 6px 14px; border-radius: 6px;
+      background: none; border: 1px solid var(--border);
+      color: var(--text); font-size: 12px; font-weight: 600;
+      cursor: pointer; transition: all .15s; font-family: inherit;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .hi-load svg { width: 12px; height: 12px; }
+    .hi-load:hover { background: rgba(88,166,255,.1); border-color: var(--blue); color: var(--blue); }
+    .hi-delete {
+      flex-shrink: 0;
+      padding: 6px 10px; border-radius: 6px;
+      background: none; border: 1px solid var(--border);
+      color: var(--muted); font-size: 12px; font-weight: 500;
+      cursor: pointer; transition: all .15s; font-family: inherit;
+      display: flex; align-items: center; gap: 5px;
+    }
+    .hi-delete svg { width: 12px; height: 12px; }
+    .hi-delete:hover { background: rgba(248,81,73,.12); border-color: #f85149; color: #f85149; }
+
+    /* ── Delete confirmation modal ───────────────────────────────────────── */
+    .modal-overlay {
+      position: fixed; inset: 0; z-index: 1000;
+      background: rgba(0,0,0,.65); backdrop-filter: blur(4px);
+      display: flex; align-items: center; justify-content: center;
+      animation: modalIn .15s ease both;
+    }
+    .modal-overlay.hiding { animation: modalOut .15s ease both; }
+    @keyframes modalIn  { from { opacity:0; } to { opacity:1; } }
+    @keyframes modalOut { from { opacity:1; } to { opacity:0; } }
+    .modal-box {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 14px; box-shadow: 0 24px 60px rgba(0,0,0,.6);
+      width: 100%; max-width: 420px; margin: 16px;
+      animation: boxIn .18s cubic-bezier(.34,1.56,.64,1) both;
+    }
+    .modal-overlay.hiding .modal-box { animation: boxOut .15s ease both; }
+    @keyframes boxIn  { from { opacity:0; transform:scale(.93) translateY(8px); } to { opacity:1; transform:none; } }
+    @keyframes boxOut { from { opacity:1; transform:none; } to { opacity:0; transform:scale(.95); } }
+    .modal-head {
+      padding: 20px 20px 0;
+      display: flex; align-items: flex-start; gap: 14px;
+    }
+    .modal-icon {
+      width: 40px; height: 40px; flex-shrink: 0;
+      background: rgba(248,81,73,.15); border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      color: #f85149;
+    }
+    .modal-icon svg { width: 20px; height: 20px; }
+    .modal-title { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+    .modal-subtitle { font-size: 13px; color: var(--muted); line-height: 1.5; }
+    .modal-name {
+      display: block; margin-top: 10px; padding: 8px 12px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 8px; font-size: 12.5px; font-weight: 600;
+      color: var(--text); word-break: break-all;
+    }
+    .modal-footer {
+      display: flex; gap: 8px; justify-content: flex-end;
+      padding: 18px 20px 20px;
+    }
+    .btn-modal-cancel {
+      padding: 8px 18px; border-radius: 8px; font-size: 13px; font-weight: 600;
+      background: none; border: 1px solid var(--border); color: var(--muted);
+      cursor: pointer; font-family: inherit; transition: all .15s;
+    }
+    .btn-modal-cancel:hover { border-color: var(--text); color: var(--text); }
+    .btn-modal-confirm {
+      padding: 8px 18px; border-radius: 8px; font-size: 13px; font-weight: 600;
+      background: #f85149; border: none; color: #fff;
+      cursor: pointer; font-family: inherit; transition: background .15s;
+      display: flex; align-items: center; gap: 7px;
+    }
+    .btn-modal-confirm svg { width: 13px; height: 13px; }
+    .btn-modal-confirm:hover { background: #da3633; }
+    .btn-modal-confirm:disabled { background: var(--muted); cursor: not-allowed; }
+    .history-empty {
+      padding: 24px 16px; text-align: center;
+      color: var(--muted); font-size: 13px;
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); border-style: dashed;
+    }
+    .history-loading { padding: 16px; text-align: center; color: var(--muted); font-size: 13px; }
+
+    /* ── Upload queue ────────────────────────────────────────────────────── */
+    .queue-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .queue-header-title {
+      font-size: 13px; font-weight: 600; color: var(--text);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .queue-header-title svg { width: 14px; height: 14px; color: var(--blue); }
+    .queue-count {
+      padding: 2px 8px; border-radius: 99px; font-size: 11px; font-weight: 700;
+      background: rgba(88,166,255,.15); color: var(--blue);
+    }
+    .queue-list { display: flex; flex-direction: column; gap: 7px; margin-bottom: 14px; }
+    .queue-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 11px 14px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); transition: border-color .2s;
+    }
+    .queue-item.qi-active   { border-color: var(--blue); }
+    .queue-item.qi-done-row { border-color: var(--green); }
+    .queue-item.qi-err-row  { border-color: var(--red); opacity: .7; }
+    .qi-icon {
+      width: 32px; height: 32px; flex-shrink: 0;
+      background: rgba(88,166,255,.1); border-radius: 7px;
+      display: flex; align-items: center; justify-content: center; color: var(--blue);
+    }
+    .qi-icon svg { width: 15px; height: 15px; }
+    .qi-info { flex: 1; min-width: 0; }
+    .qi-name { font-size: 12.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .qi-size { font-size: 11px; color: var(--muted); margin-top: 1px; }
+    .qi-badge {
+      flex-shrink: 0; font-size: 11px; font-weight: 700;
+      padding: 3px 10px; border-radius: 20px;
+      display: flex; align-items: center; gap: 5px;
+    }
+    .qi-badge.st-queued     { color: var(--muted);   background: rgba(125,133,144,.12); }
+    .qi-badge.st-uploading  { color: var(--blue);    background: rgba(88,166,255,.12);  }
+    .qi-badge.st-processing { color: var(--orange);  background: rgba(210,153,34,.12);  }
+    .qi-badge.st-done       { color: var(--green);   background: rgba(63,185,80,.12);   }
+    .qi-badge.st-error      { color: var(--red);     background: rgba(248,81,73,.12);   }
+    .qi-badge .spinner { width: 9px; height: 9px; border-width: 1.5px; flex-shrink: 0; }
+
+    /* ── Cancel button + cancelled badge ────────────────────────────────────── */
+    .btn-cancel-proc {
+      padding: 8px 18px; border-radius: 8px; font-size: 13px; font-weight: 600;
+      background: rgba(248,81,73,.12); color: #f85149;
+      border: 1px solid rgba(248,81,73,.35);
+      cursor: pointer; font-family: inherit; transition: all .15s;
+      display: flex; align-items: center; gap: 7px;
+    }
+    .btn-cancel-proc svg { width: 13px; height: 13px; }
+    .btn-cancel-proc:hover { background: rgba(248,81,73,.22); border-color: #f85149; }
+    .btn-cancel-proc:disabled { opacity: .5; cursor: not-allowed; }
+    .badge-cancelled { background: rgba(210,153,34,.15); color: var(--orange); }
+
+    /* ── Multi-select checkboxes ─────────────────────────────────────────── */
+    .hi-check {
+      width: 15px; height: 15px; flex-shrink: 0; cursor: pointer;
+      accent-color: var(--blue); margin-right: 2px;
+    }
+    .hi-item.hi-selected {
+      border-color: var(--blue);
+      background: rgba(88,166,255,.06);
+    }
+
+    /* ── Selection action bar ────────────────────────────────────────────── */
+    .selection-bar {
+      margin-top: 10px; padding: 10px 14px;
+      background: var(--surface);
+      border: 1px solid var(--blue);
+      border-radius: var(--radius);
+      align-items: center; gap: 10px;
+      animation: sbFade .18s ease both;
+    }
+    @keyframes sbFade { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:translateY(0); } }
+    .sel-label { font-size: 13px; font-weight: 600; color: var(--blue); flex: 1; }
+    .btn-sel-clear {
+      padding: 5px 12px; border-radius: 6px; font-size: 12px; font-weight: 600;
+      background: none; border: 1px solid var(--border); color: var(--muted);
+      cursor: pointer; font-family: inherit; transition: all .15s;
+    }
+    .btn-sel-clear:hover { border-color: var(--muted); color: var(--text); }
+    .btn-sel-search {
+      padding: 5px 14px; border-radius: 6px; font-size: 12px; font-weight: 600;
+      background: var(--blue); color: #fff; border: none;
+      cursor: pointer; font-family: inherit; transition: background .15s;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .btn-sel-search svg { width: 12px; height: 12px; }
+    .btn-sel-search:hover { background: #4493e0; }
+    .btn-sel-delete {
+      padding: 5px 14px; border-radius: 6px; font-size: 12px; font-weight: 600;
+      background: rgba(248,81,73,.15); color: #f85149;
+      border: 1px solid rgba(248,81,73,.4);
+      cursor: pointer; font-family: inherit; transition: all .15s;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .btn-sel-delete svg { width: 12px; height: 12px; }
+    .btn-sel-delete:hover { background: rgba(248,81,73,.28); border-color: #f85149; }
+
+    /* ── Multi-mode indicator (step 3) ───────────────────────────────────── */
+    .multi-mode-bar {
+      padding: 10px 16px; margin-bottom: 16px;
+      background: rgba(88,166,255,.08);
+      border: 1px solid rgba(88,166,255,.28);
+      border-radius: var(--radius);
+      font-size: 13px; font-weight: 600; color: var(--blue);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .multi-mode-bar svg { width: 14px; height: 14px; flex-shrink: 0; }
+    .btn-exit-multi {
+      margin-left: auto; padding: 4px 12px; border-radius: 6px;
+      font-size: 11px; font-weight: 600; cursor: pointer;
+      background: none; border: 1px solid rgba(88,166,255,.35); color: var(--blue);
+      font-family: inherit; transition: all .15s;
+    }
+    .btn-exit-multi:hover { background: rgba(88,166,255,.12); }
+
+    /* ── Multi-video result cards ────────────────────────────────────────── */
+    #multi-results { display: flex; flex-direction: column; gap: 14px; }
+    .mrc-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); overflow: hidden;
+    }
+    .mrc-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 16px; border-bottom: 1px solid var(--border);
+    }
+    .mrc-name { font-size: 13px; font-weight: 600; }
+    .mrc-match { font-size: 12px; font-weight: 700; }
+    .mrc-match.has-match { color: var(--green); }
+    .mrc-match.no-match  { color: var(--muted); }
+    .mrc-msg { padding: 8px 16px; font-size: 12px; color: var(--muted); }
+    .mrc-card .video-wrap { margin: 0; border-radius: 0; border: none; border-top: 1px solid var(--border); }
+    .mrc-skipped { padding: 10px 16px; font-size: 12px; color: var(--orange); }
+
+    /* ── App shell hidden until authenticated ───────────────────────────── */
+    body.app-locked header,
+    body.app-locked .steps,
+    body.app-locked main { display: none !important; }
+
+    /* ── Login overlay ───────────────────────────────────────────────────── */
+    #login-overlay {
+      position: fixed; inset: 0; z-index: 9999;
+      background: var(--bg);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .login-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 40px 36px;
+      width: 100%; max-width: 380px;
+      box-shadow: 0 8px 40px rgba(0,0,0,.55);
+      text-align: center;
+    }
+    .login-logo {
+      width: 56px; height: 56px;
+      background: linear-gradient(135deg, var(--blue), var(--purple));
+      border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 28px; margin: 0 auto 20px;
+    }
+    .login-title { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+    .login-sub   { font-size: 13px; color: var(--muted); margin-bottom: 28px; }
+    .login-field {
+      width: 100%; display: block;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 8px; padding: 10px 14px;
+      color: var(--text); font-size: 14px; font-family: inherit;
+      outline: none; transition: border-color .15s;
+      margin-bottom: 12px;
+    }
+    .login-field:focus { border-color: var(--blue); }
+    .btn-login {
+      width: 100%; padding: 11px;
+      background: var(--blue); color: #fff;
+      border: none; border-radius: 8px;
+      font-size: 14px; font-weight: 600; font-family: inherit;
+      cursor: pointer; transition: background .15s; margin-top: 4px;
+    }
+    .btn-login:hover    { background: #4493e0; }
+    .btn-login:disabled { opacity: .6; cursor: not-allowed; }
+    .login-error {
+      margin-top: 14px; font-size: 13px;
+      color: var(--red); min-height: 18px;
+    }
+
+    /* ── Logout button ───────────────────────────────────────────────────── */
+    .btn-logout {
+      margin-left: auto;
+      padding: 6px 14px; border-radius: 7px;
+      background: none; border: 1px solid var(--border);
+      color: var(--muted); font-size: 12px; font-weight: 600;
+      cursor: pointer; font-family: inherit; transition: all .15s;
+    }
+    .btn-logout:hover { border-color: var(--red); color: var(--red); }
+  </style>
+</head>
+<body class="app-locked">
+
+<!-- ── Login overlay ───────────────────────────────────────────────────────── -->
+<div id="login-overlay">
+  <div class="login-card">
+    <div class="login-logo">🔍</div>
+    <div class="login-title">FindMe</div>
+    <div class="login-sub">Intelligent Video Attribute Search System</div>
+    <input class="login-field" type="text"     id="login-username" placeholder="Username"
+           autocomplete="username"     onkeydown="if(event.key==='Enter')doLogin()" />
+    <input class="login-field" type="password" id="login-password" placeholder="Password"
+           autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()" />
+    <button class="btn-login" id="btn-login" onclick="doLogin()">Sign In</button>
+    <div class="login-error" id="login-error"></div>
+  </div>
+</div>
+
+<!-- ── Header ──────────────────────────────────────────────────────────────── -->
+<header>
+  <div class="logo-icon">🔍</div>
+  <div>
+    <h1>FindMe</h1>
+    <p>Intelligent Video Attribute Search System</p>
+  </div>
+  <button class="btn-logout" onclick="doLogout()">Logout</button>
+</header>
+
+<!-- ── Step bar ────────────────────────────────────────────────────────────── -->
+<nav class="steps">
+  <button class="step-btn active" id="tab-upload" onclick="goStep(1)">
+    <div class="num" id="num-1">1</div> Upload Video
+  </button>
+  <span class="step-sep">›</span>
+  <button class="step-btn" id="tab-process" onclick="goStep(2)">
+    <div class="num" id="num-2">2</div> Process
+  </button>
+  <span class="step-sep">›</span>
+  <button class="step-btn" id="tab-search" onclick="goStep(3)">
+    <div class="num" id="num-3">3</div> Search
+  </button>
+</nav>
+
+<!-- ── Main content ────────────────────────────────────────────────────────── -->
+<main>
+
+  <!-- STEP 1: Upload -->
+  <div class="section visible" id="sec-upload">
+    <div class="card">
+      <div class="card-title"><span>📁</span> Upload a Surveillance Video</div>
+      <label for="file-input" id="drop-zone"
+             ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)">
+        <div class="icon">🎬</div>
+        <h3>Drag &amp; drop one or more videos here</h3>
+        <p>or click to browse — hold <kbd style="font-family:inherit;background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:1px 5px;font-size:11px;">Ctrl</kbd> to select multiple files</p>
+        <p style="margin-top:6px;font-size:12px;color:var(--muted);">MP4 · AVI · MOV · MKV · WebM</p>
+      </label>
+      <input type="file" id="file-input" accept=".mp4,.avi,.mov,.mkv,.webm,.m4v,video/*" multiple onchange="onFileSelected(event)" />
+      <div class="file-chosen" id="file-chosen">
+        <span>🎞️</span>
+        <span class="fname" id="fname">—</span>
+        <span class="fsize" id="fsize">—</span>
+      </div>
+      <div class="btn-row" id="single-upload-row">
+        <button class="btn btn-primary" id="btn-upload" onclick="uploadVideo()" disabled>
+          <span>⬆️</span> Upload &amp; Continue
+        </button>
+        <span id="upload-status" style="color:var(--muted);font-size:12px;"></span>
+      </div>
+
+    </div>
+
+    <!-- ── Previously Processed Videos ─────────────────────────────────── -->
+    <div class="history-section" id="history-section">
+      <div class="history-header">
+        <div class="history-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+          </svg>
+          Processed Videos
+        </div>
+        <span class="history-badge" id="history-badge" style="display:none">0</span>
+      </div>
+      <div id="history-list">
+        <div class="history-loading">
+          <span class="spinner" style="border-color:rgba(88,166,255,.3);border-top-color:var(--blue);"></span>
+          Loading history…
+        </div>
+      </div>
+
+      <!-- Appears when one or more checkboxes are ticked -->
+      <div class="selection-bar" id="selection-bar" style="display:none">
+        <span class="sel-label" id="sel-label">0 selected</span>
+        <button class="btn-sel-clear" onclick="clearSelection()">Clear</button>
+        <button class="btn-sel-search" onclick="startMultiSearch()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          Search Selected
+        </button>
+        <button class="btn-sel-delete" onclick="deleteSelected()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+          Delete Selected
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 2: Process -->
+  <div class="section" id="sec-process">
+    <div class="card">
+      <div class="card-title"><span>⚙️</span> Run AI Pipeline</div>
+      <p style="color:var(--muted);font-size:13px;margin-bottom:16px;">
+        The pipeline will detect every person in the video, assign tracking IDs,
+        extract clothing and appearance attributes, and store everything in the database.
+      </p>
+
+      <!-- Single-video controls — hidden when multi-upload queue is active -->
+      <div id="single-proc-view">
+        <div style="display:flex;align-items:center;gap:12px;padding:14px 18px;
+                    background:var(--surface);border-radius:8px;border:1px solid var(--border);">
+          <span>🎞️</span>
+          <div style="flex:1">
+            <div id="proc-filename" style="font-weight:600;font-size:13px;">—</div>
+            <div id="proc-frames" style="font-size:11px;color:var(--muted);">—</div>
+          </div>
+          <span id="proc-badge" class="status-badge badge-uploaded">Uploaded</span>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn btn-success" id="btn-process" onclick="startProcess()">
+            <span>▶️</span> Start Processing
+          </button>
+        </div>
+      </div>
+
+      <!-- Multi-upload queue panel — shown when multiple files are selected -->
+      <div id="queue-panel" style="display:none">
+        <div class="queue-header">
+          <div class="queue-header-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+            Processing Queue
+          </div>
+          <span class="queue-count" id="queue-count">0 videos</span>
+        </div>
+        <div class="queue-list" id="queue-list"></div>
+        <div class="btn-row" style="gap:10px;">
+          <button class="btn btn-primary" id="btn-process-all" onclick="runQueue()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            Process All
+          </button>
+          <button class="btn" id="btn-queue-clear" onclick="clearQueue()"
+                  style="background:none;border:1px solid var(--border);color:var(--muted);padding:8px 16px;font-size:13px;">
+            Clear
+          </button>
+        </div>
+      </div>
+
+      <div class="progress-wrap" id="progress-wrap" style="display:none">
+        <div class="progress-header">
+          <span class="progress-label" id="prog-label">Processing…</span>
+          <span class="progress-pct" id="prog-pct">0%</span>
+        </div>
+        <div class="progress-bar-bg">
+          <div class="progress-bar-fill" id="prog-bar"></div>
+        </div>
+        <div class="progress-msg" id="prog-msg">Starting…</div>
+      </div>
+
+      <!-- Cancel button — visible while processing (single or queue mode) -->
+      <div class="btn-row" id="cancel-row" style="display:none;margin-top:12px;">
+        <button class="btn-cancel-proc" id="btn-cancel" onclick="cancelProcessing()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          Cancel Processing
+        </button>
+      </div>
+
+      <div class="video-wrap" id="out-video-wrap">
+        <video id="out-video" controls></video>
+        <div class="video-label">✅ Annotated output — all detected persons with tracking IDs</div>
+      </div>
+
+      <div class="btn-row" id="go-search-row" style="display:none">
+        <button class="btn btn-purple" onclick="goStep(3)">
+          <span>🔍</span> Go to Search
+        </button>
+      </div>
+
+      <!-- Shown after cancellation so the user can start fresh -->
+      <div class="btn-row" id="go-upload-row" style="display:none">
+        <button class="btn" onclick="resetAfterCancel()"
+                style="background:none;border:1px solid var(--border);color:var(--muted);padding:8px 18px;font-size:13px;">
+          ← Upload New Video
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 3: Search -->
+  <div class="section" id="sec-search">
+
+    <!-- Shown when multi-video mode is active -->
+    <div class="multi-mode-bar" id="multi-mode-bar" style="display:none">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg>
+      Multi-video search — <strong id="multi-mode-count">0</strong> videos selected
+      <button class="btn-exit-multi" onclick="clearMultiMode()">Exit multi-search</button>
+    </div>
+
+    <div class="search-layout">
+
+      <!-- Left: Filters -->
+      <div class="filters">
+        <div class="filters-header">
+          <span>🎛️ Attribute Filters</span>
+          <button class="btn btn-sm" style="background:none;border:1px solid var(--border);color:var(--muted);padding:4px 10px;font-size:11px;border-radius:6px;cursor:pointer;" onclick="clearFilters()">Clear all</button>
+        </div>
+
+        <!-- Threshold sliders -->
+        <div class="threshold-row">
+          <label>Attribute threshold <span id="bin-thresh-val">0.50</span></label>
+          <input type="range" id="bin-thresh" min="0.1" max="0.9" step="0.05" value="0.5"
+                 oninput="document.getElementById('bin-thresh-val').textContent=parseFloat(this.value).toFixed(2)">
+        </div>
+        <div class="threshold-row" style="padding-top:8px;border-bottom:1px solid var(--border);">
+          <label>Color threshold <span id="color-thresh-val">0.40</span></label>
+          <input type="range" id="color-thresh" min="0.1" max="0.9" step="0.05" value="0.4"
+                 oninput="document.getElementById('color-thresh-val').textContent=parseFloat(this.value).toFixed(2)">
+        </div>
+
+        <!-- Dynamic attribute groups (injected by JS) -->
+        <div id="attr-groups"></div>
+
+        <!-- Color dropdowns -->
+        <div style="padding:12px 20px 4px;font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;">Colors</div>
+        <div id="color-selects"></div>
+
+        <div class="filter-actions">
+          <button class="btn btn-primary btn-sm" id="btn-search" onclick="dispatchSearch()">
+            <span>🔍</span> Search
+          </button>
+        </div>
+      </div>
+
+      <!-- Right: Results -->
+      <div class="result-panel">
+        <div class="card" style="padding:20px;">
+          <div class="card-title"><span>📊</span> Results</div>
+          <p style="color:var(--muted);font-size:13px;">
+            Select attributes on the left, then click <strong>Search</strong>.<br>
+            The result video will highlight every person matching all chosen attributes.
+          </p>
+          <div class="result-info" id="result-info">
+            <div class="result-count" id="result-count">0</div>
+            <div class="result-sub" id="result-sub">matching persons found</div>
+            <div class="no-result" id="no-result-msg" style="display:none"></div>
+          </div>
+        </div>
+
+        <div class="video-wrap" id="query-video-wrap">
+          <video id="query-video" controls></video>
+          <div class="video-label">🟡 Query result — only matched persons are highlighted</div>
+        </div>
+
+        <!-- Multi-video results injected here by renderMultiResults() -->
+        <div id="multi-results" style="display:none"></div>
+      </div>
+
+    </div>
+  </div>
+
+</main>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script>
+// ── Auth ───────────────────────────────────────────────────────────────────
+
+// Intercept every fetch to automatically attach the session token.
+// This runs before any other code so all subsequent fetch calls are covered.
+const _origFetch = window.fetch.bind(window);
+window.fetch = function(url, options) {
+  options = options ? { ...options } : {};
+  options.headers = options.headers ? { ...options.headers } : {};
+  const token = sessionStorage.getItem('findme_token');
+  if (token) options.headers['X-Session-Token'] = token;
+  return _origFetch(url, options).then(res => {
+    // If the server says "not authenticated" (e.g. after a server restart),
+    // clear the stale token and show the login screen automatically.
+    if (res.status === 401 && !url.toString().includes('/api/login')) {
+      sessionStorage.removeItem('findme_token');
+      showLoginOverlay();
+    }
+    return res;
+  });
+};
+
+async function checkAuth() {
+  const token = sessionStorage.getItem('findme_token');
+  if (!token) { showLoginOverlay(); return; }
+  try {
+    const res = await fetch('/api/auth/check');
+    if (res.ok) {
+      hideLoginOverlay();
+      loadHistory();
+    } else {
+      sessionStorage.removeItem('findme_token');
+      showLoginOverlay();
+    }
+  } catch {
+    sessionStorage.removeItem('findme_token');
+    showLoginOverlay();
+  }
+}
+
+async function doLogin() {
+  const username = document.getElementById('login-username').value.trim();
+  const password = document.getElementById('login-password').value;
+  const errEl    = document.getElementById('login-error');
+  const btn      = document.getElementById('btn-login');
+  errEl.textContent = '';
+  if (!username) { errEl.textContent = 'Please enter your username.'; return; }
+  btn.disabled    = true;
+  btn.textContent = 'Signing in…';
+  try {
+    // Use _origFetch directly so we don't depend on the token interceptor here
+    const res  = await _origFetch('/api/login', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ username, password }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      errEl.textContent = data.detail || 'Invalid credentials';
+      return;
+    }
+    sessionStorage.setItem('findme_token', data.token);
+    hideLoginOverlay();
+    loadHistory();
+  } catch {
+    errEl.textContent = 'Connection error. Please try again.';
+  } finally {
+    btn.disabled    = false;
+    btn.textContent = 'Sign In';
+  }
+}
+
+async function doLogout() {
+  try { await fetch('/api/logout', { method: 'POST' }); } catch { /* best-effort */ }
+  sessionStorage.removeItem('findme_token');
+  showLoginOverlay();
+}
+
+function showLoginOverlay() {
+  document.body.classList.add('app-locked');
+  document.getElementById('login-overlay').style.display = 'flex';
+  document.getElementById('login-username').value    = '';
+  document.getElementById('login-password').value    = '';
+  document.getElementById('login-error').textContent = '';
+  setTimeout(() => document.getElementById('login-username').focus(), 60);
+}
+
+function hideLoginOverlay() {
+  document.getElementById('login-overlay').style.display = 'none';
+  document.body.classList.remove('app-locked');
+}
+
+// ── Attribute definitions ──────────────────────────────────────────────────
+const ATTR_GROUPS = {
+  "Gender & Age": [
+    { key: "personalFemale",   label: "Female" },
+    { key: "personalMale",     label: "Male" },
+    { key: "personalLess15",   label: "Under 15" },
+    { key: "personalLess30",   label: "15 – 30 years" },
+    { key: "personalLess45",   label: "30 – 45 years" },
+    { key: "personalLess60",   label: "45 – 60 years" },
+    { key: "personalLarger60", label: "Over 60" },
+  ],
+  "Upper Body": [
+    { key: "upperBodyCasual",       label: "Casual" },
+    { key: "upperBodyFormal",       label: "Formal" },
+    { key: "upperBodyJacket",       label: "Jacket" },
+    { key: "upperBodyLogo",         label: "Logo print" },
+    { key: "upperBodyLongSleeve",   label: "Long sleeve" },
+    { key: "upperBodyNoSleeve",     label: "Sleeveless" },
+    { key: "upperBodyPlaid",        label: "Plaid" },
+    { key: "upperBodyShortSleeve",  label: "Short sleeve" },
+    { key: "upperBodySuit",         label: "Suit" },
+    { key: "upperBodySweater",      label: "Sweater" },
+    { key: "upperBodyThickStripes", label: "Thick stripes" },
+    { key: "upperBodyThinStripes",  label: "Thin stripes" },
+    { key: "upperBodyTshirt",       label: "T-shirt" },
+    { key: "upperBodyVNeck",        label: "V-Neck" },
+    { key: "upperBodyOther",        label: "Other" },
+  ],
+  "Lower Body": [
+    { key: "lowerBodyCapri",      label: "Capri" },
+    { key: "lowerBodyCasual",     label: "Casual" },
+    { key: "lowerBodyFormal",     label: "Formal" },
+    { key: "lowerBodyHotPants",   label: "Hot pants" },
+    { key: "lowerBodyJeans",      label: "Jeans" },
+    { key: "lowerBodyLongSkirt",  label: "Long skirt" },
+    { key: "lowerBodyPlaid",      label: "Plaid" },
+    { key: "lowerBodyShorts",     label: "Shorts" },
+    { key: "lowerBodyShortSkirt", label: "Short skirt" },
+    { key: "lowerBodySuits",      label: "Suit trousers" },
+    { key: "lowerBodyThinStripes",label: "Thin stripes" },
+    { key: "lowerBodyTrousers",   label: "Trousers" },
+  ],
+  "Footwear": [
+    { key: "footwearBoots",        label: "Boots" },
+    { key: "footwearLeatherShoes", label: "Leather shoes" },
+    { key: "footwearSandals",      label: "Sandals" },
+    { key: "footwearShoes",        label: "Shoes" },
+    { key: "footwearSneaker",      label: "Sneakers" },
+    { key: "footwearStocking",     label: "Stocking" },
+  ],
+  "Hair": [
+    { key: "hairBald",  label: "Bald" },
+    { key: "hairLong",  label: "Long hair" },
+    { key: "hairShort", label: "Short hair" },
+  ],
+  "Accessories": [
+    { key: "accessoryHairBand",  label: "Hair band" },
+    { key: "accessoryHat",       label: "Hat" },
+    { key: "accessoryHeadphone", label: "Headphones" },
+    { key: "accessoryKerchief",  label: "Kerchief" },
+    { key: "accessoryMuffler",   label: "Muffler / Scarf" },
+    { key: "accessoryNothing",   label: "No accessory" },
+    { key: "accessorySunglasses",label: "Sunglasses" },
+  ],
+  "Carrying": [
+    { key: "carryingBabyBuggy",    label: "Baby buggy" },
+    { key: "carryingBackpack",     label: "Backpack" },
+    { key: "carryingFolder",       label: "Folder / Briefcase" },
+    { key: "carryingLuggageCase",  label: "Luggage" },
+    { key: "carryingMessengerBag", label: "Messenger bag" },
+    { key: "carryingNothing",      label: "Nothing" },
+    { key: "carryingOther",        label: "Other" },
+    { key: "carryingPlasticBags",  label: "Plastic bags" },
+    { key: "carryingShoppingTro",  label: "Shopping trolley" },
+    { key: "carryingUmbrella",     label: "Umbrella" },
+    { key: "carryingSuitcase",     label: "Suitcase" },
+  ],
+};
+
+const COLOR_REGIONS = [
+  { key: "footwear",  label: "Footwear color" },
+  { key: "hair",      label: "Hair color" },
+  { key: "lowerbody", label: "Lower body color" },
+  { key: "upperbody", label: "Upper body color" },
+];
+const COLOR_OPTIONS = ["black","blue","brown","green","grey","orange","pink","purple","red","white","yellow"];
+
+// ── State ──────────────────────────────────────────────────────────────────
+let currentJobId   = null;
+let selectedFile   = null;
+let pollTimer      = null;
+let selectedJobIds = new Set();   // job_ids checked in the history panel
+let multiMode      = false;       // true when searching across multiple videos
+
+// ── Upload queue state ─────────────────────────────────────────────────────
+let uploadQueue    = [];    // [{file, job_id, status}]
+let queueRunning   = false;
+let queueCancelled = false; // set true to stop the queue after current job
+let activeJobId    = null;  // job_id currently being processed in queue
+
+// ── Build attribute filter UI ──────────────────────────────────────────────
+(function buildFilters() {
+  const container = document.getElementById('attr-groups');
+  Object.entries(ATTR_GROUPS).forEach(([groupName, attrs]) => {
+    const groupEl = document.createElement('div');
+    groupEl.className = 'filter-group';
+    const btn = document.createElement('button');
+    btn.className = 'group-toggle';
+    btn.innerHTML = `${groupName} <span class="arrow">▼</span>`;
+    btn.onclick = () => {
+      btn.classList.toggle('open');
+      body.classList.toggle('open');
+    };
+    const body = document.createElement('div');
+    body.className = 'group-body';
+    attrs.forEach(attr => {
+      const label = document.createElement('label');
+      label.className = 'attr-checkbox';
+      label.innerHTML = `
+        <input type="checkbox" name="bin" value="${attr.key}" />
+        <div class="check-box">✓</div>
+        <span>${attr.label}</span>`;
+      body.appendChild(label);
+    });
+    groupEl.appendChild(btn);
+    groupEl.appendChild(body);
+    container.appendChild(groupEl);
+  });
+
+  // Color dropdowns
+  const colorContainer = document.getElementById('color-selects');
+  COLOR_REGIONS.forEach(region => {
+    const div = document.createElement('div');
+    div.className = 'color-group';
+    div.innerHTML = `
+      <label>${region.label}</label>
+      <select class="color-select" id="color-${region.key}">
+        <option value="">— Any —</option>
+        ${COLOR_OPTIONS.map(c => `<option value="${c}">${c.charAt(0).toUpperCase()+c.slice(1)}</option>`).join('')}
+      </select>`;
+    colorContainer.appendChild(div);
+  });
+})();
+
+// ── Navigation ─────────────────────────────────────────────────────────────
+function goStep(n) {
+  if (n === 2 && !currentJobId && uploadQueue.length === 0) { toast('Upload a video first.', 'error'); return; }
+  if (n === 3 && !currentJobId) { toast('Upload a video first.', 'error'); return; }
+  [1,2,3].forEach(i => {
+    document.getElementById(`sec-${['upload','process','search'][i-1]}`).classList.toggle('visible', i===n);
+    const tab = document.getElementById(`tab-${['upload','process','search'][i-1]}`);
+    tab.classList.toggle('active', i===n);
+  });
+}
+
+// ── Drag & drop ────────────────────────────────────────────────────────────
+function onDragOver(e)  { e.preventDefault(); document.getElementById('drop-zone').classList.add('drag-over'); }
+function onDragLeave()  { document.getElementById('drop-zone').classList.remove('drag-over'); }
+function onDrop(e) {
+  e.preventDefault();
+  document.getElementById('drop-zone').classList.remove('drag-over');
+  const files = [...e.dataTransfer.files].filter(f => f.type.startsWith('video/') || /\.(mp4|avi|mov|mkv|webm)$/i.test(f.name));
+  if (files.length === 0) return;
+  if (files.length === 1) { applyFile(files[0]); } else { applyQueue(files); }
+}
+function onFileSelected(e) {
+  const files = [...e.target.files];
+  if (files.length === 0) return;
+  if (files.length === 1) { applyFile(files[0]); } else { applyQueue(files); }
+}
+function applyFile(f) {
+  selectedFile = f;
+  document.getElementById('fname').textContent = f.name;
+  document.getElementById('fsize').textContent = (f.size / 1e6).toFixed(1) + ' MB';
+  document.getElementById('file-chosen').classList.add('show');
+  document.getElementById('btn-upload').disabled = false;
+}
+
+// ── Multi-upload queue ─────────────────────────────────────────────────────
+
+function applyQueue(files) {
+  uploadQueue  = files.map(f => ({ file: f, job_id: null, status: 'queued' }));
+  queueRunning = false;
+
+  // Prepare the queue panel (lives in Step 2)
+  document.getElementById('queue-count').textContent = `${files.length} video${files.length > 1 ? 's' : ''}`;
+  document.getElementById('btn-process-all').disabled = false;
+  document.getElementById('btn-queue-clear').style.display = '';
+  renderQueueList();
+
+  // In Step 2: show queue, hide single-video controls
+  document.getElementById('single-proc-view').style.display = 'none';
+  document.getElementById('queue-panel').style.display = 'block';
+
+  // Mark Step 1 done in nav and navigate to Step 2
+  document.getElementById('num-1').textContent = '✓';
+  document.getElementById('tab-upload').classList.add('done');
+  goStep(2);
+}
+
+function renderQueueList() {
+  const listEl = document.getElementById('queue-list');
+  listEl.innerHTML = '';
+  uploadQueue.forEach((item, i) => {
+    const div = document.createElement('div');
+    div.className = 'queue-item';
+    div.id = `qi-${i}`;
+    div.innerHTML = `
+      <div class="qi-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+      </div>
+      <div class="qi-info">
+        <div class="qi-name" title="${item.file.name}">${item.file.name}</div>
+        <div class="qi-size">${(item.file.size / 1e6).toFixed(1)} MB</div>
+      </div>
+      <span class="qi-badge st-queued" id="qi-badge-${i}">Queued</span>`;
+    listEl.appendChild(div);
+  });
+}
+
+function _setQueueItemStatus(i, status, label) {
+  uploadQueue[i].status = status;
+  const rowEl   = document.getElementById(`qi-${i}`);
+  const badgeEl = document.getElementById(`qi-badge-${i}`);
+  if (!rowEl || !badgeEl) return;
+
+  rowEl.classList.remove('qi-active', 'qi-done-row', 'qi-err-row');
+  if (status === 'uploading' || status === 'processing') rowEl.classList.add('qi-active');
+  if (status === 'done')  rowEl.classList.add('qi-done-row');
+  if (status === 'error') rowEl.classList.add('qi-err-row');
+
+  badgeEl.className = `qi-badge st-${status}`;
+  badgeEl.innerHTML = label;
+}
+
+function _spinnerHTML() {
+  return '<span class="spinner" style="border-color:rgba(255,255,255,.25);border-top-color:currentColor;"></span>';
+}
+
+// ── Cancel button helpers ──────────────────────────────────────────────────
+
+function _showCancelBtn() {
+  const btn = document.getElementById('btn-cancel');
+  btn.disabled = false;
+  btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Cancel Processing`;
+  document.getElementById('cancel-row').style.display = 'flex';
+}
+
+function _hideCancelBtn() {
+  document.getElementById('cancel-row').style.display = 'none';
+  const btn = document.getElementById('btn-cancel');
+  btn.disabled = false;
+}
+
+async function cancelProcessing() {
+  const btn = document.getElementById('btn-cancel');
+  btn.disabled = true;
+  btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Cancelling…`;
+
+  const jobToCancel = activeJobId || currentJobId;
+
+  if (queueRunning) {
+    // Tell the queue loop to stop before starting the next item
+    queueCancelled = true;
+  }
+
+  if (jobToCancel) {
+    try {
+      await fetch(`/api/cancel/${jobToCancel}`, { method: 'POST' });
+    } catch (_) { /* best-effort */ }
+  }
+  // UI updates will follow via pollStatus() or _pollQueueItem() callbacks
+}
+
+function resetAfterCancel() {
+  document.getElementById('go-upload-row').style.display   = 'none';
+  document.getElementById('progress-wrap').style.display   = 'none';
+  document.getElementById('out-video-wrap').classList.remove('show');
+  document.getElementById('single-proc-view').style.display = '';
+  document.getElementById('btn-process').disabled = false;
+  document.getElementById('proc-filename').textContent = '—';
+  document.getElementById('proc-frames').textContent   = '—';
+  setBadge('uploaded');
+  currentJobId  = null;
+  selectedFile  = null;
+  document.getElementById('file-chosen').classList.remove('show');
+  document.getElementById('btn-upload').disabled = true;
+  document.getElementById('file-input').value    = '';
+  document.getElementById('num-1').textContent   = '1';
+  document.getElementById('tab-upload').classList.remove('done');
+  document.getElementById('num-2').textContent   = '2';
+  document.getElementById('tab-process').classList.remove('done');
+  goStep(1);
+}
+
+async function runQueue() {
+  if (queueRunning) return;
+  queueRunning   = true;
+  queueCancelled = false;
+  activeJobId    = null;
+
+  const processBtn = document.getElementById('btn-process-all');
+  const clearBtn   = document.getElementById('btn-queue-clear');
+  processBtn.disabled = true;
+  clearBtn.style.display = 'none';
+  _showCancelBtn();
+
+  const completedJobIds = [];
+  let wasCancelled = false;
+
+  for (let i = 0; i < uploadQueue.length; i++) {
+    // ── Check cancellation before starting a new item ──────────────────────
+    if (queueCancelled) {
+      wasCancelled = true;
+      for (let j = i; j < uploadQueue.length; j++) {
+        _setQueueItemStatus(j, 'error', '✗ Cancelled');
+      }
+      break;
+    }
+
+    const item = uploadQueue[i];
+
+    // ── 1. Upload ──────────────────────────────────────────────────────────
+    _setQueueItemStatus(i, 'uploading', `${_spinnerHTML()} Uploading…`);
+    try {
+      const fd = new FormData();
+      fd.append('file', item.file);
+      const res  = await fetch('/api/upload', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Upload failed');
+      uploadQueue[i].job_id = data.job_id;
+    } catch (err) {
+      _setQueueItemStatus(i, 'error', `✗ ${err.message}`);
+      continue;
+    }
+
+    const jobId = uploadQueue[i].job_id;
+
+    // ── Cancel before processing if flag was set during upload ─────────────
+    if (queueCancelled) {
+      wasCancelled = true;
+      try { await fetch(`/api/cancel/${jobId}`, { method: 'POST' }); } catch (_) {}
+      _setQueueItemStatus(i, 'error', '✗ Cancelled');
+      for (let j = i + 1; j < uploadQueue.length; j++) {
+        _setQueueItemStatus(j, 'error', '✗ Cancelled');
+      }
+      break;
+    }
+
+    // ── 2. Start processing ────────────────────────────────────────────────
+    activeJobId = jobId;
+    _setQueueItemStatus(i, 'processing', `${_spinnerHTML()} Starting…`);
+    try {
+      const res = await fetch(`/api/process/${jobId}`, { method: 'POST' });
+      if (!res.ok) throw new Error('Could not start processing');
+    } catch (err) {
+      _setQueueItemStatus(i, 'error', `✗ ${err.message}`);
+      activeJobId = null;
+      continue;
+    }
+
+    // ── 3. Poll until done (or cancelled) ─────────────────────────────────
+    const ok = await _pollQueueItem(i, jobId);
+    activeJobId = null;
+    if (ok) completedJobIds.push(jobId);
+    if (queueCancelled) { wasCancelled = true; break; }
+  }
+
+  queueRunning   = false;
+  queueCancelled = false;
+  activeJobId    = null;
+  _hideCancelBtn();
+
+  if (completedJobIds.length === 0) {
+    const msg = wasCancelled
+      ? 'Queue cancelled — no videos completed.'
+      : 'All videos failed to process.';
+    toast(msg, 'error');
+    processBtn.disabled = false;
+    clearBtn.style.display = '';
+    return;
+  }
+
+  // Some videos completed — reload history before navigating
+  if (wasCancelled) {
+    toast(`Cancelled — ${completedJobIds.length} video(s) completed and ready to search.`, 'error');
+  }
+
+  // ── Reload history so newly processed videos appear ─────────────────────
+  await loadHistory();
+
+  // ── Check all completed jobs in the history panel ────────────────────────
+  completedJobIds.forEach(id => {
+    selectedJobIds.add(id);
+    const row = document.querySelector(`[data-job-id="${id}"]`);
+    if (row) {
+      const chk = row.querySelector('.hi-check');
+      if (chk) chk.checked = true;
+      row.classList.add('hi-selected');
+    }
+  });
+  updateSelectionBar();
+
+  // Set currentJobId so goStep() guard passes
+  currentJobId = completedJobIds[0];
+
+  // ── Navigate to Search ───────────────────────────────────────────────────
+  document.getElementById('num-1').textContent = '✓';
+  document.getElementById('tab-upload').classList.add('done');
+  document.getElementById('num-2').textContent = '✓';
+  document.getElementById('tab-process').classList.add('done');
+
+  if (completedJobIds.length === 1) {
+    // Single success → single-video mode, same as "Load" from history
+    multiMode = false;
+    goStep(3);
+    toast('Processing complete! Ready to search.', 'success');
+  } else {
+    // Multiple successes → multi-video search mode
+    multiMode = true;
+    document.getElementById('multi-mode-bar').style.display = 'flex';
+    document.getElementById('multi-mode-count').textContent = completedJobIds.length;
+    goStep(3);
+    toast(`${completedJobIds.length} videos processed — set filters and click Search.`, 'success');
+  }
+}
+
+async function _pollQueueItem(idx, jobId) {
+  return new Promise(resolve => {
+    const timer = setInterval(async () => {
+      // Local cancellation flag fired — stop polling immediately
+      if (queueCancelled) {
+        clearInterval(timer);
+        _setQueueItemStatus(idx, 'error', '✗ Cancelled');
+        resolve(false);
+        return;
+      }
+      try {
+        const res  = await fetch(`/api/status/${jobId}`);
+        const data = await res.json();
+        const pct  = Math.round(data.percent || 0);
+        if (data.status === 'done') {
+          clearInterval(timer);
+          _setQueueItemStatus(idx, 'done', '✓ Done');
+          resolve(true);
+        } else if (data.status === 'cancelled') {
+          clearInterval(timer);
+          _setQueueItemStatus(idx, 'error', '✗ Cancelled');
+          resolve(false);
+        } else if (data.status === 'error') {
+          clearInterval(timer);
+          _setQueueItemStatus(idx, 'error', `✗ ${data.message || 'Error'}`);
+          resolve(false);
+        } else {
+          _setQueueItemStatus(idx, 'processing', `${_spinnerHTML()} ${pct}%`);
+        }
+      } catch (_) { /* transient network error — keep polling */ }
+    }, 1500);
+  });
+}
+
+function clearQueue() {
+  uploadQueue    = [];
+  queueRunning   = false;
+  queueCancelled = false;
+  activeJobId    = null;
+  _hideCancelBtn();
+
+  // Restore Step 2 to single-video mode
+  document.getElementById('queue-panel').style.display = 'none';
+  document.getElementById('single-proc-view').style.display = '';
+
+  // Reset Step 1 file picker
+  document.getElementById('file-input').value = '';
+  selectedFile = null;
+  document.getElementById('btn-upload').disabled = true;
+  document.getElementById('file-chosen').classList.remove('show');
+
+  // Reset nav and return to Step 1
+  document.getElementById('num-1').textContent = '1';
+  document.getElementById('tab-upload').classList.remove('done');
+  goStep(1);
+}
+
+// ── Upload ─────────────────────────────────────────────────────────────────
+async function uploadVideo() {
+  if (!selectedFile) return;
+  const btn = document.getElementById('btn-upload');
+  const status = document.getElementById('upload-status');
+  btn.disabled = true;
+  status.innerHTML = '<span class="spinner"></span> Uploading…';
+
+  const fd = new FormData();
+  fd.append('file', selectedFile);
+
+  try {
+    const res  = await fetch('/api/upload', { method: 'POST', body: fd });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Upload failed');
+
+    currentJobId = data.job_id;
+    status.textContent = '✅ Uploaded!';
+
+    // Populate process tab
+    document.getElementById('proc-filename').textContent = data.filename;
+    document.getElementById('proc-frames').textContent   = `${data.total_frames} frames detected`;
+
+    // Mark step 1 done
+    document.getElementById('num-1').textContent = '✓';
+    document.getElementById('tab-upload').classList.add('done');
+
+    setTimeout(() => goStep(2), 600);
+  } catch (err) {
+    status.textContent = '❌ ' + err.message;
+    btn.disabled = false;
+    toast(err.message, 'error');
+  }
+}
+
+// ── Start processing ───────────────────────────────────────────────────────
+async function startProcess() {
+  if (!currentJobId) return;
+  const btn = document.getElementById('btn-process');
+  btn.disabled = true;
+
+  try {
+    const res  = await fetch(`/api/process/${currentJobId}`, { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Failed to start');
+
+    document.getElementById('progress-wrap').style.display = 'block';
+    setBadge('processing');
+    _showCancelBtn();
+    pollTimer = setInterval(pollStatus, 1000);
+  } catch (err) {
+    btn.disabled = false;
+    toast(err.message, 'error');
+  }
+}
+
+async function pollStatus() {
+  try {
+    const res  = await fetch(`/api/status/${currentJobId}`);
+    const data = await res.json();
+
+    const pct = data.percent || 0;
+    document.getElementById('prog-bar').style.width  = pct + '%';
+    document.getElementById('prog-pct').textContent  = pct.toFixed(1) + '%';
+    document.getElementById('prog-msg').textContent  = data.message || '';
+    document.getElementById('prog-label').textContent = data.status === 'done' ? 'Complete' : 'Processing…';
+
+    if (data.status === 'done') {
+      clearInterval(pollTimer);
+      setBadge('done');
+      showOutputVideo();
+      _hideCancelBtn();
+      document.getElementById('go-search-row').style.display = 'flex';
+      document.getElementById('num-2').textContent = '✓';
+      document.getElementById('tab-process').classList.add('done');
+      toast('Processing complete! Go to Search.', 'success');
+    } else if (data.status === 'error') {
+      clearInterval(pollTimer);
+      setBadge('error');
+      _hideCancelBtn();
+      toast('Pipeline error: ' + data.message, 'error');
+    } else if (data.status === 'cancelled') {
+      clearInterval(pollTimer);
+      setBadge('cancelled');
+      _hideCancelBtn();
+      document.getElementById('prog-label').textContent = 'Cancelled';
+      document.getElementById('prog-msg').textContent   = 'Processing was cancelled. All partial files have been removed.';
+      document.getElementById('go-upload-row').style.display = 'flex';
+      currentJobId = null;
+      toast('Processing cancelled.', 'error');
+    }
+  } catch (_) {}
+}
+
+function setBadge(status) {
+  const b = document.getElementById('proc-badge');
+  b.className = `status-badge badge-${status}`;
+  b.innerHTML = status === 'processing' ? '<span class="spinner"></span> Processing'
+              : status === 'done'       ? '✅ Done'
+              : status === 'error'      ? '❌ Error'
+              : status === 'cancelled'  ? '🚫 Cancelled'
+              : 'Uploaded';
+}
+
+function showOutputVideo() {
+  const wrap  = document.getElementById('out-video-wrap');
+  const video = document.getElementById('out-video');
+  wrap.classList.add('show');
+  video.src = `/api/video/${currentJobId}/output?t=${Date.now()}`;
+  video.load();
+}
+
+// ── Search ─────────────────────────────────────────────────────────────────
+async function runSearch() {
+  if (!currentJobId) { toast('No processed video found.', 'error'); return; }
+
+  const bin_requirements = [...document.querySelectorAll('input[name="bin"]:checked')]
+    .map(el => el.value);
+
+  const color_requirements = {};
+  COLOR_REGIONS.forEach(r => {
+    const val = document.getElementById(`color-${r.key}`).value;
+    if (val) color_requirements[r.key] = val;
+  });
+
+  const bin_thresh   = parseFloat(document.getElementById('bin-thresh').value);
+  const color_thresh = parseFloat(document.getElementById('color-thresh').value);
+
+  const btn = document.getElementById('btn-search');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Searching…';
+
+  try {
+    const res  = await fetch('/api/query', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ job_id: currentJobId, bin_requirements, color_requirements, bin_thresh, color_thresh }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Query failed');
+
+    // Show result info
+    const info = document.getElementById('result-info');
+    info.classList.add('show');
+    document.getElementById('result-count').textContent = data.matched_tracks;
+    document.getElementById('result-sub').textContent   = data.matched_tracks === 1
+      ? 'matching person found' : 'matching persons found';
+
+    const noMsg = document.getElementById('no-result-msg');
+    noMsg.style.display = data.matched_tracks === 0 ? 'block' : 'none';
+    noMsg.textContent   = data.message || '';
+
+    if (data.video_url) {
+      const wrap  = document.getElementById('query-video-wrap');
+      const video = document.getElementById('query-video');
+      wrap.classList.add('show');
+      video.src = data.video_url + `?t=${Date.now()}`;
+      video.load();
+      video.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else {
+      document.getElementById('query-video-wrap').classList.remove('show');
+    }
+
+    toast(data.message, data.matched_tracks > 0 ? 'success' : 'error');
+  } catch (err) {
+    toast(err.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<span>🔍</span> Search';
+  }
+}
+
+function clearFilters() {
+  document.querySelectorAll('input[name="bin"]').forEach(el => el.checked = false);
+  COLOR_REGIONS.forEach(r => {
+    document.getElementById(`color-${r.key}`).value = '';
+  });
+}
+
+// ── Toast ──────────────────────────────────────────────────────────────────
+let toastTimer = null;
+function toast(msg, type = '') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = `show ${type}`;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.className = ''; }, 3500);
+}
+
+// ── History ────────────────────────────────────────────────────────────────
+function timeAgo(epochMs) {
+  const diff = Date.now() - epochMs;
+  const m = Math.floor(diff / 60000);
+  const h = Math.floor(diff / 3600000);
+  const d = Math.floor(diff / 86400000);
+  if (m < 1)  return 'just now';
+  if (m < 60) return `${m} minute${m > 1 ? 's' : ''} ago`;
+  if (h < 24) return `${h} hour${h > 1 ? 's' : ''} ago`;
+  if (d <  7) return `${d} day${d > 1 ? 's' : ''} ago`;
+  return new Date(epochMs).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+async function loadHistory() {
+  const listEl  = document.getElementById('history-list');
+  const badgeEl = document.getElementById('history-badge');
+
+  try {
+    const res  = await fetch('/api/jobs');
+    const data = await res.json();
+    const jobs = data.jobs || [];
+
+    if (jobs.length === 0) {
+      listEl.innerHTML = '<div class="history-empty">No processed videos yet. Upload a video above to get started.</div>';
+      return;
+    }
+
+    badgeEl.textContent = jobs.length;
+    badgeEl.style.display = 'inline-flex';
+    listEl.innerHTML = '';
+
+    jobs.forEach(job => {
+      const item = document.createElement('div');
+      item.className = 'hi-item';
+      item.dataset.jobId = job.job_id;
+
+      // Checkbox — enables multi-select
+      const chk = document.createElement('input');
+      chk.type      = 'checkbox';
+      chk.className = 'hi-check';
+      chk.title     = 'Select for multi-video search';
+      chk.addEventListener('change', () => {
+        if (chk.checked) {
+          selectedJobIds.add(job.job_id);
+          item.classList.add('hi-selected');
+        } else {
+          selectedJobIds.delete(job.job_id);
+          item.classList.remove('hi-selected');
+        }
+        updateSelectionBar();
+      });
+
+      // Left icon
+      const iconDiv = document.createElement('div');
+      iconDiv.className = 'hi-icon';
+      iconDiv.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>`;
+
+      // Info block
+      const infoDiv = document.createElement('div');
+      infoDiv.className = 'hi-info';
+      const frames  = job.frame_count.toLocaleString();
+      const persons = job.track_count;
+      infoDiv.innerHTML = `
+        <div class="hi-name" title="${job.video_name}">${job.video_name}</div>
+        <div class="hi-meta">
+          <span>${persons} person${persons !== 1 ? 's' : ''} tracked</span>
+          <span>${frames} frames</span>
+          <span>${timeAgo(job.processed_at)}</span>
+        </div>`;
+
+      // Load button — single-video behaviour, unchanged
+      const btn = document.createElement('button');
+      btn.className = 'hi-load';
+      btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Load`;
+      btn.addEventListener('click', () => openJob(job.job_id, job.video_name, job.track_count, job.frame_count));
+
+      // Delete button
+      const delBtn = document.createElement('button');
+      delBtn.className = 'hi-delete';
+      delBtn.title = 'Delete this video and all its data';
+      delBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg> Delete`;
+      delBtn.addEventListener('click', () => deleteJob(job.job_id, job.video_name, item, badgeEl));
+
+      item.appendChild(chk);
+      item.appendChild(iconDiv);
+      item.appendChild(infoDiv);
+      item.appendChild(btn);
+      item.appendChild(delBtn);
+      listEl.appendChild(item);
+    });
+
+  } catch (_) {
+    listEl.innerHTML = '<div class="history-empty">Could not load history.</div>';
+  }
+}
+
+// ── Delete confirmation modal ──────────────────────────────────────────────
+
+let _modalResolve = null;   // resolves to true (confirm) or false (cancel)
+
+function showDeleteModal({ title, subtitle, name }) {
+  return new Promise(resolve => {
+    _modalResolve = resolve;
+
+    document.getElementById('modal-title-text').textContent = title;
+    document.getElementById('modal-subtitle').textContent   = subtitle;
+
+    const nameEl = document.getElementById('modal-name');
+    if (name) {
+      nameEl.textContent  = name;
+      nameEl.style.display = 'block';
+    } else {
+      nameEl.style.display = 'none';
+    }
+
+    const overlay = document.getElementById('delete-modal-overlay');
+    overlay.classList.remove('hiding');
+
+    const wrapper = document.getElementById('delete-modal');
+    wrapper.style.display = 'block';
+
+    // Wire buttons (re-wire each time to avoid duplicate listeners)
+    const cancelBtn  = document.getElementById('modal-cancel-btn');
+    const confirmBtn = document.getElementById('modal-confirm-btn');
+    cancelBtn.onclick  = () => _closeModal(false);
+    confirmBtn.onclick = () => _closeModal(true);
+
+    // Close on overlay click (outside the box)
+    overlay.onclick = (e) => { if (e.target === overlay) _closeModal(false); };
+
+    // Close on Escape
+    document.addEventListener('keydown', _modalEscListener);
+
+    confirmBtn.focus();
+  });
+}
+
+function _modalEscListener(e) {
+  if (e.key === 'Escape') _closeModal(false);
+}
+
+function _closeModal(result) {
+  document.removeEventListener('keydown', _modalEscListener);
+  const overlay = document.getElementById('delete-modal-overlay');
+  overlay.classList.add('hiding');
+  setTimeout(() => {
+    document.getElementById('delete-modal').style.display = 'none';
+    overlay.classList.remove('hiding');
+  }, 150);
+  if (_modalResolve) { _modalResolve(result); _modalResolve = null; }
+}
+
+// ── Single-job delete ──────────────────────────────────────────────────────
+
+async function deleteJob(jobId, videoName, itemEl, badgeEl) {
+  const confirmed = await showDeleteModal({
+    title:    'Delete Video',
+    subtitle: 'This will permanently remove all associated data and cannot be undone.',
+    name:     videoName,
+  });
+  if (!confirmed) return;
+
+  try {
+    const res = await fetch(`/api/job/${jobId}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error(`Server returned ${res.status}`);
+
+    _removeJobFromUI(jobId, itemEl, badgeEl);
+    toast(`Deleted: ${videoName}`, 'success');
+  } catch (err) {
+    toast(`Delete failed: ${err.message}`, 'error');
+  }
+}
+
+// ── Bulk delete (selected jobs) ────────────────────────────────────────────
+
+async function deleteSelected() {
+  const ids = [...selectedJobIds];
+  if (ids.length === 0) { toast('No videos selected.', 'error'); return; }
+
+  const confirmed = await showDeleteModal({
+    title:    `Delete ${ids.length} Video${ids.length > 1 ? 's' : ''}`,
+    subtitle: `This will permanently remove all data for ${ids.length} selected video${ids.length > 1 ? 's' : ''}. This cannot be undone.`,
+    name:     null,
+  });
+  if (!confirmed) return;
+
+  const confirmBtn = document.getElementById('modal-confirm-btn');
+  if (confirmBtn) confirmBtn.disabled = true;
+
+  try {
+    const res = await fetch('/api/jobs/delete', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ job_ids: ids }),
+    });
+    if (!res.ok) throw new Error(`Server returned ${res.status}`);
+    const data = await res.json();
+
+    const badgeEl = document.getElementById('history-badge');
+    for (const jobId of (data.deleted || ids)) {
+      const itemEl = document.querySelector(`[data-job-id="${jobId}"]`);
+      if (itemEl) _removeJobFromUI(jobId, itemEl, badgeEl);
+    }
+
+    const failCount = (data.failed || []).length;
+    if (failCount > 0) {
+      toast(`Deleted ${ids.length - failCount}, failed ${failCount}.`, 'error');
+    } else {
+      toast(`Deleted ${ids.length} video${ids.length > 1 ? 's' : ''}.`, 'success');
+    }
+  } catch (err) {
+    toast(`Bulk delete failed: ${err.message}`, 'error');
+  }
+}
+
+// ── Shared post-delete UI cleanup ──────────────────────────────────────────
+
+function _removeJobFromUI(jobId, itemEl, badgeEl) {
+  if (currentJobId === jobId) currentJobId = null;
+  selectedJobIds.delete(jobId);
+
+  if (itemEl) itemEl.remove();
+
+  const remaining = document.querySelectorAll('#history-list .hi-item').length;
+  if (remaining === 0) {
+    document.getElementById('history-list').innerHTML =
+      '<div class="history-empty">No processed videos yet. Upload a video above to get started.</div>';
+    if (badgeEl) badgeEl.style.display = 'none';
+  } else {
+    if (badgeEl) {
+      badgeEl.textContent    = remaining;
+      badgeEl.style.display  = '';
+    }
+  }
+
+  updateSelectionBar();
+}
+
+function openJob(jobId, videoName, trackCount, frameCount) {
+  currentJobId = jobId;
+
+  // Restore the process tab display so it looks correct if the user navigates to it
+  document.getElementById('proc-filename').textContent = videoName;
+  document.getElementById('proc-frames').textContent   =
+    `${frameCount.toLocaleString()} frames · ${trackCount} person${trackCount !== 1 ? 's' : ''} tracked`;
+  setBadge('done');
+  document.getElementById('go-search-row').style.display = 'flex';
+  showOutputVideo();
+
+  // Mark steps 1 and 2 as done in the nav bar
+  document.getElementById('num-1').textContent = '✓';
+  document.getElementById('tab-upload').classList.add('done');
+  document.getElementById('num-2').textContent = '✓';
+  document.getElementById('tab-process').classList.add('done');
+
+  goStep(3);
+  toast(`Loaded: ${videoName}`, 'success');
+}
+
+// On page load: check auth first; loadHistory is called inside hideLoginOverlay flow
+document.addEventListener('DOMContentLoaded', checkAuth);
+
+// ── Multi-select helpers ───────────────────────────────────────────────────
+function updateSelectionBar() {
+  const bar   = document.getElementById('selection-bar');
+  const label = document.getElementById('sel-label');
+  const n     = selectedJobIds.size;
+
+  if (n === 0) {
+    bar.style.display = 'none';
+    return;
+  }
+  bar.style.display = 'flex';
+  label.textContent = n === 1 ? '1 video selected' : `${n} videos selected`;
+}
+
+function clearSelection() {
+  selectedJobIds.clear();
+  // Uncheck all checkboxes and remove highlight
+  document.querySelectorAll('.hi-check').forEach(c => { c.checked = false; });
+  document.querySelectorAll('.hi-item').forEach(i => i.classList.remove('hi-selected'));
+  updateSelectionBar();
+}
+
+// Called when user clicks "Search Selected" in the history panel
+function startMultiSearch() {
+  if (selectedJobIds.size === 0) { toast('Select at least one video first.', 'error'); return; }
+
+  multiMode = true;
+
+  // Show multi-mode indicator in step 3
+  const bar = document.getElementById('multi-mode-bar');
+  bar.style.display = 'flex';
+  document.getElementById('multi-mode-count').textContent = selectedJobIds.size;
+
+  // If exactly one video, also set currentJobId so single-video things still work
+  if (selectedJobIds.size === 1) {
+    currentJobId = [...selectedJobIds][0];
+  }
+
+  // Ensure step nav is accessible
+  if (!currentJobId) currentJobId = [...selectedJobIds][0];
+  document.getElementById('num-1').textContent = '✓';
+  document.getElementById('tab-upload').classList.add('done');
+  document.getElementById('num-2').textContent = '✓';
+  document.getElementById('tab-process').classList.add('done');
+
+  goStep(3);
+  toast(`${selectedJobIds.size} video${selectedJobIds.size > 1 ? 's' : ''} selected — set filters and click Search.`, 'success');
+}
+
+function clearMultiMode() {
+  multiMode = false;
+  selectedJobIds.clear();
+  document.querySelectorAll('.hi-check').forEach(c => { c.checked = false; });
+  document.querySelectorAll('.hi-item').forEach(i => i.classList.remove('hi-selected'));
+  updateSelectionBar();
+  document.getElementById('multi-mode-bar').style.display = 'none';
+  document.getElementById('multi-results').style.display  = 'none';
+  document.getElementById('multi-results').innerHTML = '';
+}
+
+// ── Search dispatcher ──────────────────────────────────────────────────────
+// Routes to multi or single search based on current mode.
+// Single-video path is completely unchanged.
+function dispatchSearch() {
+  if (multiMode && selectedJobIds.size > 1) {
+    runMultiSearch();
+  } else {
+    runSearch();   // existing function — not touched
+  }
+}
+
+// ── Multi-video search ─────────────────────────────────────────────────────
+async function runMultiSearch() {
+  const bin_requirements = [...document.querySelectorAll('input[name="bin"]:checked')]
+    .map(el => el.value);
+
+  const color_requirements = {};
+  COLOR_REGIONS.forEach(r => {
+    const val = document.getElementById(`color-${r.key}`).value;
+    if (val) color_requirements[r.key] = val;
+  });
+
+  const bin_thresh   = parseFloat(document.getElementById('bin-thresh').value);
+  const color_thresh = parseFloat(document.getElementById('color-thresh').value);
+
+  const btn = document.getElementById('btn-search');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Searching…';
+
+  // Hide single-video result areas while multi results are shown
+  document.getElementById('result-info').classList.remove('show');
+  document.getElementById('query-video-wrap').classList.remove('show');
+  document.getElementById('multi-results').style.display = 'none';
+  document.getElementById('multi-results').innerHTML = '';
+
+  try {
+    const res  = await fetch('/api/query-multi', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({
+        job_ids: [...selectedJobIds],
+        bin_requirements,
+        color_requirements,
+        bin_thresh,
+        color_thresh,
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Multi-search failed');
+
+    renderMultiResults(data.results);
+    toast(
+      `Search complete — ${data.total_matched} match${data.total_matched !== 1 ? 'es' : ''} across ${data.videos_searched} video${data.videos_searched !== 1 ? 's' : ''}.`,
+      data.total_matched > 0 ? 'success' : 'error'
+    );
+  } catch (err) {
+    toast(err.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<span>🔍</span> Search';
+  }
+}
+
+function renderMultiResults(results) {
+  const container = document.getElementById('multi-results');
+  container.style.display = 'flex';
+  container.innerHTML = '';
+
+  results.forEach(r => {
+    const card = document.createElement('div');
+    card.className = 'mrc-card';
+
+    // Header row: video name + match count
+    const hdr = document.createElement('div');
+    hdr.className = 'mrc-header';
+
+    const nameEl = document.createElement('div');
+    nameEl.className = 'mrc-name';
+    nameEl.textContent = r.video_name;
+
+    const matchEl = document.createElement('div');
+    matchEl.className = `mrc-match ${r.matched_tracks > 0 ? 'has-match' : 'no-match'}`;
+    matchEl.textContent = r.matched_tracks > 0
+      ? `${r.matched_tracks} match${r.matched_tracks !== 1 ? 'es' : ''}`
+      : 'No matches';
+
+    hdr.appendChild(nameEl);
+    hdr.appendChild(matchEl);
+    card.appendChild(hdr);
+
+    if (r.skipped) {
+      const skip = document.createElement('div');
+      skip.className = 'mrc-skipped';
+      skip.textContent = r.message;
+      card.appendChild(skip);
+    } else {
+      // Status message
+      const msg = document.createElement('div');
+      msg.className = 'mrc-msg';
+      msg.textContent = r.message;
+      card.appendChild(msg);
+
+      // Video player (only if there are matches)
+      if (r.video_url) {
+        const wrap  = document.createElement('div');
+        wrap.className = 'video-wrap show';
+        const video = document.createElement('video');
+        video.controls = true;
+        video.src = r.video_url + `?t=${Date.now()}`;
+        const lbl = document.createElement('div');
+        lbl.className = 'video-label';
+        lbl.innerHTML = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--orange);flex-shrink:0;margin-right:2px;"></span> ${r.video_name} — matched persons highlighted`;
+        wrap.appendChild(video);
+        wrap.appendChild(lbl);
+        card.appendChild(wrap);
+      }
+    }
+
+    container.appendChild(card);
+  });
+
+  // Scroll to results
+  container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+</script>
+  <!-- ── Delete confirmation modal (hidden until needed) ───────────────── -->
+  <div id="delete-modal" style="display:none" role="dialog" aria-modal="true" aria-labelledby="modal-title-text">
+    <div class="modal-overlay" id="delete-modal-overlay">
+      <div class="modal-box">
+        <div class="modal-head">
+          <div class="modal-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+          </div>
+          <div>
+            <div class="modal-title" id="modal-title-text">Delete Video</div>
+            <div class="modal-subtitle" id="modal-subtitle">This action is permanent and cannot be undone.</div>
+            <span class="modal-name" id="modal-name" style="display:none"></span>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-modal-cancel" id="modal-cancel-btn">Cancel</button>
+          <button class="btn-modal-confirm" id="modal-confirm-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>
